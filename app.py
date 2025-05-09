@@ -211,7 +211,7 @@ print(f"--- DEBUG: Initial editor value (first 100 chars): {st.session_state.use
 # Use the code_editor component
 # Pass the string state variable (our source of truth for the code) to the editor for display
 editor_return_value = code_editor(
-    st.session_state.user_code_string, # --- Display this content ---
+    value=st.session_state.user_code_string, # --- Display this content ---
     lang="python",                     # Set language for syntax highlighting
     height=[20, 45],                   # Set initial and minimum height in rem
     key="code_editor_ace"              # Unique key for the component
