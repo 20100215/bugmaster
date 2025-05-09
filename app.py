@@ -45,14 +45,14 @@ You are an expert Python coding tutor. Generate a Python function with a subtle 
 The format must look exactly like this:
 
 # This function is supposed to calculate the sum of numbers in a list
-def calculate_sum(numbers):
+def func(...):
     ...
 
 ---HIDDEN_TEST---
 
 def test():
-    result = calculate_sum([1, 2, 3])
-    assert result == 6
+    result = func_name(....)
+    assert result == ...
     print("Test passed!")
 
 
