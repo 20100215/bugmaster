@@ -13,6 +13,15 @@ MODEL_NAME = "llama3-8b-8192"
 # --- STATE SETUP ---
 st.set_page_config(page_title="BugMaster", layout="centered")
 
+st.markdown("""
+    <style>
+    textarea {
+        font-family: monospace !important;
+        font-size: 14px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
 if "test_code" not in st.session_state:
@@ -182,7 +191,7 @@ if start:
 # --- CODE EDITOR ---
 if st.session_state.round_started:
     st.subheader("🧩 Debug This Code")
-    user_code = st.text_area("Edit the broken code below:", value=st.session_state.code, height=400)
+    user_code = st.text_area("Edit the broken code below:", value=st.session_state.code, height=700)
 
 
     if st.button("✅ Submit Fix"):
