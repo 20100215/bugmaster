@@ -186,15 +186,17 @@ def split_code_sections(full_code):
 def check_user_fix(user_code, test_code):
     try:
         namespace = {}
-        exec(user_code, namespace)  # user's fixed code
-        exec(test_code, namespace)  # hidden test
-        test_func = namespace.get("test", None)
-        if not test_func:
-            return False, "❌ Test function not found or not named correctly."
-        test_func()
-        return True, None
-    except Exception as e:
+        # Combine user code and test code in same scope
+        exec(user_code + "\n" + test_code, namespace)
+
+        if "test" in namespace and callable(namespace["test"]):
+            namespace["test"]()
+            return True, None
+        else:
+            return False, "❌ Test function not found or not callable."
+    except Exception:
         return False, traceback.format_exc()
+
 
 
 
