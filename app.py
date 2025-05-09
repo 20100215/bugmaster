@@ -41,6 +41,7 @@ You are a coding interview maker. Generate a Python program containing function 
 1. On a separate line, write exactly: ---ORIGINAL_CODE--- 
 2. Write a complete function. The function MUST be called something meaningful.
    - Include a docstring with the input and output formats
+   - Actual generated code should be around 10-25 lines long, excluding comments and docstrings
 3. On a separate line, write exactly: ---HIDDEN_TEST---
 4. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
    - It should call the same function you just wrote above.
