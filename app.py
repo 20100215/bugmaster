@@ -187,8 +187,8 @@ def check_user_fix(user_code, test_code):
         namespace = {}
 
         # Execute user code: this should define the function, e.g., calculate_sum
-        print(f'{user_code}\n\n\n{test_code}')
-        
+        st.write(f'{user_code}\n\n\n{test_code}')
+
         exec(f'{user_code}\n\n\n{test_code}', namespace)
         
         # Check and call the test function
