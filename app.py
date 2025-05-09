@@ -28,33 +28,31 @@ def generate_prompt(difficulty):
     return f"""
 You are an expert Python coding tutor. Generate a Python function with a subtle bug that a student must fix.
 
-Requirements:
-1. At the top, write a comment that clearly explains what the function is supposed to do.
-2. Below it, write the **buggy function only** (do NOT explain the bug).
-3. On a separate line, write exactly: ---HIDDEN_TEST---
-4. Below that, write a test function named `def test():` that:
-   - Imports or reuses the buggy function.
-   - Calls it with meaningful test input.
-   - Asserts expected output using `assert`.
-   - Prints “Test passed!” if successful.
-   - DO NOT use try/except or hide the test name.
+⚠️ RULES (Strict):
+1. At the top, write a short comment that explains what the function is supposed to do.
+2. Write one complete function with a small bug. This function MUST be called something meaningful like `calculate_sum`, `reverse_string`, or `binary_search`.
+3. Do NOT include any hints or comments about where the bug is.
+4. On a separate line, write exactly: ---HIDDEN_TEST---
+5. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
+   - It should call the same function you just wrote above (e.g. `calculate_sum`)
+   - Include a few example cases and `assert` statements
+   - If the test passes, print “Test passed!”
 
-Do not include the "---HIDDEN_TEST---" section in the same comment block. Return only valid Python code and nothing else.
+❌ Do NOT change function names between the buggy code and the test.
+✅ DO name the test function exactly: `test()`
 
-Format strictly like this:
+The format must look exactly like this:
 
-# This function is supposed to ...
-def function_name(...):
+# This function is supposed to calculate the sum of numbers in a list
+def calculate_sum(numbers):
     ...
 
 ---HIDDEN_TEST---
 
 def test():
-    ...
-    assert ...
+    result = calculate_sum([1, 2, 3])
+    assert result == 6
     print("Test passed!")
-
----
 
 Examples based on difficulty:
 
@@ -74,14 +72,14 @@ def calculate_sum(numbers):
 
 ---HIDDEN_TEST---
 
-def test_calculate_sum():
+def test():
     test_list = [1, 2, 3, 4, 5]
     expected_sum = 15
     actual_sum = calculate_sum(test_list)
     assert actual_sum == expected_sum, f"Test failed! Expected expected_sum, got actual_sum"
     print("Test passed for calculate_sum!")
 
-test_calculate_sum()
+test()
 
 --- MEDIUM ---
 
@@ -99,14 +97,14 @@ def reverse_string(s):
 
 ---HIDDEN_TEST---
 
-def test_reverse_string():
+def test():
     test_string = "abcdef"
     expected_string = "fedcba"
     actual_string = reverse_string(test_string)
     assert actual_string == expected_string, f"Test failed! Expected 'expected_string', got 'actual_string'"
     print("Test passed for reverse_string!")
 
-test_reverse_string()
+test()
 
 --- HARD ---
 
@@ -134,7 +132,7 @@ def binary_search(sorted_list, target):
 
 ---HIDDEN_TEST---
 
-def test_binary_search():
+def test():
     test_list = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]
     test_cases = [(23, 5), (2, 0), (91, 9), (10, -1), (56, 7)]
     for target, expected_index in test_cases:
@@ -142,7 +140,7 @@ def test_binary_search():
         assert actual_index == expected_index, f"Test failed for target target! Expected index expected_index, got actual_index"
     print("Test passed for binary_search!")
 
-test_binary_search()
+test()
 
 ---
 
