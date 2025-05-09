@@ -200,7 +200,7 @@ editor_result = None
 if st.session_state.round_started:
     st.markdown("### 🧩 Debug this code")
     editor_result = code_editor(
-        value=st.session_state.code,
+        st.session_state.code,
         height=300,
         language="python",
         theme="light",
