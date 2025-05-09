@@ -25,7 +25,7 @@ except Exception as e:
 
 
 # --- Helper Functions ---
-# ... (keep generate_broken_code function) ...
+# ... (keep generate_broken_code and run_code_safely functions) ...
 def generate_broken_code(difficulty):
     prompt = f"""
 You are a Python coding expert tasked with generating broken Python code for a debugging game.
@@ -70,10 +70,9 @@ Generate ONLY the Python code, nothing else. Ensure the code, if corrected, woul
         return code
     except Exception as e:
         st.error(f"Error generating code: {e}")
-        # print(f"Error generating code: {e}") # Removed debug print
+        print(f"--- DEBUG: Error generating code: {e} ---") # Debug print
         return None
 
-# ... (keep run_code_safely function) ...
 def run_code_safely(code):
     """Runs the given Python code in a separate process with a timeout."""
     try:
@@ -92,10 +91,10 @@ def run_code_safely(code):
         return -1, "", f"Error: Code execution timed out after {EXECUTION_TIMEOUT} seconds."
     except Exception as e:
         st.error(f"An unexpected error occurred during execution: {e}")
-        # import traceback # Removed debug import
-        # st.error(traceback.format_exc()) # Removed debug display
-        # print(f"An unexpected error occurred during execution: {e}") # Removed debug print
-        # print(traceback.format_exc()) # Removed debug print
+        import traceback
+        st.error(traceback.format_exc()) # Display full traceback in Streamlit for more info
+        print(f"--- DEBUG: An unexpected error occurred during execution: {e} ---") # Debug print
+        print(traceback.format_exc()) # Debug print
         return -1, "", f"An unexpected error occurred during execution: {e}"
 
 
@@ -137,7 +136,7 @@ with col1:
         st.session_state.user_code_string = "" # Clear previous code string
         st.session_state.start_time = None # Clear timer initially
 
-        # print("\n--- Start Round Button Clicked ---") # Removed debug print
+        print("\n--- DEBUG: Start Round Button Clicked ---") # Debug print
 
         broken_code = generate_broken_code(difficulty)
 
@@ -146,13 +145,13 @@ with col1:
             st.session_state.user_code_string = broken_code
             st.session_state.start_time = time.time() # Start the internal timer NOW
             st.session_state.feedback = f"Round started! Fix the code below ({difficulty} difficulty)."
-            # print(f"Code generated successfully. Length: {len(broken_code)}") # Removed debug print
-            # print(f"Setting st.session_state.user_code_string to code of length: {len(st.session_state.user_code_string)}") # Removed debug print
+            print(f"--- DEBUG: Code generated successfully. Length: {len(broken_code) if broken_code else 0} ---") # Debug print
+            print(f"--- DEBUG: Setting st.session_state.user_code_string to code of length: {len(st.session_state.user_code_string) if st.session_state.user_code_string else 0} ---") # Debug print
 
         else:
              st.session_state.game_active = False # Disable if generation failed
              st.session_state.feedback = "Failed to generate code. Please try again."
-             # print("Code generation failed.") # Removed debug print
+             print("--- DEBUG: Code generation failed. ---") # Debug print
 
         st.rerun() # Rerun to update UI immediately
 
@@ -162,8 +161,8 @@ with col2:
     submit_disabled = not st.session_state.game_active
     if st.button("Submit Code", disabled=submit_disabled):
         st.session_state.feedback = "Running your code..."
-        # print("\n--- Submit Code Button Clicked ---") # Removed debug print
-        # print(f"Code being submitted (first 100 chars): {st.session_state.user_code_string[:100] if st.session_state.user_code_string else 'EMPTY'}") # Removed debug print
+        print("\n--- DEBUG: Submit Code Button Clicked ---") # Debug print
+        print(f"--- DEBUG: Code being submitted (first 100 chars): {st.session_state.user_code_string[:100] if st.session_state.user_code_string else 'EMPTY'} ---") # Debug print
 
 
         # Get code from the state variable holding the string
@@ -182,16 +181,16 @@ with col2:
             # Clear code states for next round
             st.session_state.user_code_string = ""
             st.session_state.start_time = None # Reset internal timer start time
-            # print("Code executed successfully!") # Removed debug print
+            print("--- DEBUG: Code executed successfully! ---") # Debug print
 
 
         elif return_code != 0:
              st.session_state.feedback = f"Execution failed:\n\n{stderr}"
-             # print("Code execution failed.") # Removed debug print
-             # print(f"Stderr:\n{stderr}") # Removed debug print
+             print("--- DEBUG: Code execution failed. ---") # Debug print
+             print(f"--- DEBUG: Stderr:\n{stderr} ---") # Debug print
         else: # return_code is 0 but success indicator not found
              st.session_state.feedback = f"Code ran without crashing, but the success condition ('{SUCCESS_INDICATOR}') was not met.\n\nStandard Output:\n{stdout}\n\nStandard Error:\n{stderr if stderr else 'None'}"
-             # print(f"Code ran, but success indicator missing. Stdout:\n{stdout}") # Removed debug print
+             print(f"--- DEBUG: Code ran, but success indicator missing. Stdout:\n{stdout} ---") # Debug print
 
 
         st.rerun() # Rerun to update feedback and button state
@@ -200,12 +199,13 @@ with col2:
 # --- Timer Display (Removed) ---
 # Removed the st.metric timer display and st.rerun(interval=100) call
 
+
 # --- Code Editor ---
 st.markdown("### Code Editor")
 
-# print(f"--- Rendering Code Editor ---") # Removed debug print
-# print(f"Initial editor value (user_code_string) length: {len(st.session_state.user_code_string)}") # Removed debug print
-# print(f"Initial editor value (first 100 chars): {st.session_state.user_code_string[:100] if st.session_state.user_code_string else 'EMPTY'}") # Removed debug print
+print(f"--- DEBUG: Rendering Code Editor ---") # Debug print
+print(f"--- DEBUG: Initial editor value (user_code_string) length: {len(st.session_state.user_code_string) if st.session_state.user_code_string else 0} ---") # Debug print
+print(f"--- DEBUG: Initial editor value (first 100 chars): {st.session_state.user_code_string[:100] if st.session_state.user_code_string else 'EMPTY'} ---") # Debug print
 
 
 # Use the code_editor component
@@ -221,11 +221,15 @@ editor_return_value = code_editor(
     # wordwrap=True
 )
 
-# print(f"Code Editor returned type: {type(editor_return_value)}") # Removed debug print
-# if isinstance(editor_return_value, dict): # Removed debug print
-#     print(f"Code Editor returned dict keys: {editor_return_value.keys()}") # Removed debug print
-# elif isinstance(editor_return_value, str): # Removed debug print
-#      print(f"Code Editor returned string length: {len(editor_return_value)}") # Removed debug print
+print(f"--- DEBUG: Code Editor returned type: {type(editor_return_value)} ---") # Debug print
+if isinstance(editor_return_value, dict):
+    print(f"--- DEBUG: Code Editor returned dict keys: {editor_return_value.keys()} ---") # Debug print
+    if 'text' in editor_return_value:
+         print(f"--- DEBUG: Code Editor returned text length: {len(editor_return_value['text']) if editor_return_value['text'] else 0} ---") # Debug print
+elif isinstance(editor_return_value, str):
+     print(f"--- DEBUG: Code Editor returned string length: {len(editor_return_value) if editor_return_value else 0} ---") # Debug print
+else:
+     print(f"--- DEBUG: Code Editor returned unexpected type: {type(editor_return_value)} value: {editor_return_value} ---") # Debug print
 
 
 # --- Update the string state variable based on the component's return ---
@@ -235,22 +239,27 @@ editor_return_value = code_editor(
 latest_editor_text = None
 if isinstance(editor_return_value, dict) and 'text' in editor_return_value:
      latest_editor_text = editor_return_value['text']
-    #  print(f"Extracted text from dict, length: {len(latest_editor_text)}") # Removed debug print
+     # print(f"--- DEBUG: Extracted text from dict, length: {len(latest_editor_text) if latest_editor_text else 0} ---") # Debug print
 elif isinstance(editor_return_value, str):
      # This case might happen on initial load or simpler reruns where it returns just the string
      latest_editor_text = editor_return_value
-    #  print(f"Using string directly, length: {len(latest_editor_text)}") # Removed debug print
+     # print(f"--- DEBUG: Using string directly, length: {len(latest_editor_text) if latest_editor_text else 0} ---") # Debug print
 
 
 # Update the source of truth (st.session_state.user_code_string)
-# only if the component returned valid text content.
-if latest_editor_text is not None:
+# only if the component returned valid text content that is DIFFERENT from the current state.
+# This prevents the state from being set to None or empty unnecessarily on reruns where the text hasn't changed.
+if latest_editor_text is not None and latest_editor_text != st.session_state.user_code_string:
      st.session_state.user_code_string = latest_editor_text
-    #  print(f"Updated st.session_state.user_code_string to length: {len(st.session_state.user_code_string)}") # Removed debug print
-# else: # Removed debug print
-    # print("Code editor returned unexpected value, not updating string state.") # Removed debug print
+     print(f"--- DEBUG: Updated st.session_state.user_code_string to NEW length: {len(st.session_state.user_code_string) if st.session_state.user_code_string else 0} ---") # Debug print
+else:
+    # This happens on reruns where the text hasn't changed, or if the return value was None/unexpected
+    # print(f"--- DEBUG: st.session_state.user_code_string NOT updated. latest_editor_text is None or same as current state. ---") # Debug print
+    pass # Keep the current state
 
-# print(f"--- Finished Rendering Code Editor Section ---") # Removed debug print
+
+print(f"--- DEBUG: Final st.session_state.user_code_string length after update logic: {len(st.session_state.user_code_string) if st.session_state.user_code_string else 0} ---") # Debug print
+print(f"--- DEBUG: Finished Rendering Code Editor Section ---") # Debug print
 
 
 # --- Feedback Area ---
