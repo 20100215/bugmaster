@@ -24,30 +24,29 @@ if "round_started" not in st.session_state:
 
 
 # --- PROMPT GENERATION ---
-def generate_prompt(difficulty):
+def generate_original_code_prompt(difficulty):
     return f"""
-You are a coding interview maker. Generate a Python program containing functions with bugs that a tech expert must fix.
+You are a coding interview maker. Generate a Python program containing multiple functions (that must be interrelated) that tackle common DSA problems.
 
 ⚠️ RULES (Strict):
 1. At the top, write a short comment (start with a #) that explains what the program is supposed to do.
-2. On a separate line, write exactly: ---BUGGY_CODE--- 
-3. Write complete functions with bug/s. The functions MUST be called something meaningful.
+2. On a separate line, write exactly: ---ORIGINAL_CODE--- 
+3. Write complete functions. The functions MUST be called something meaningful.
    - Include a docstring with the input and output formats
-4. Do NOT include any hints or comments about where the bug is.
-5. On a separate line, write exactly: ---HIDDEN_TEST---
-6. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
-   - It should call the same function you just wrote above.
+4. On a separate line, write exactly: ---HIDDEN_TEST---
+5. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
+   - It should call the same functions you just wrote above.
    - Include a few example cases and `assert` statements
    - If the test passes, print “Test passed!”
 
-❌ Do NOT change function names between the buggy code and the test.
+❌ Do NOT change function names between the original code and the test.
 ✅ DO name the test function exactly: `test()`
 
 The format must look exactly like this:
 
 # This function is supposed to ... 
 
----BUGGY_CODE---
+---ORIGINAL_CODE---
 
 def func(...):
     ...
@@ -64,25 +63,40 @@ def test():
 
 Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following topics based on the difficulty given:
 
-Easy topics (minimum 2 connecting functions): 
-Arrays & Strings
-Hashmaps & Sets
-Stacks
+Easy
+1. CSV Data Cleaning - Load a CSV with missing or inconsistent values, clean the data (e.g., fill NAs, remove duplicates, fix data types).
+2. Basic Aggregations with pandas - Use groupby, mean, sum, and count to answer questions like "total sales by region".
+3. Datetime Parsing and Filtering - Parse a column of timestamps and filter rows within a specific time window.
+4. Sorting and Ranking - Sort datasets by multiple columns and add rank columns based on custom logic.
+5. Top-N Values per Group - Find the top N items (e.g., highest sales) per category using groupby().nlargest().
 
-Medium topics (minimum 3 connecting functions):
-2 Pointers
-Linked Lists
-Binary Search
-Sliding Window
+Medium
+1. ETL Simulation - Simulate a mini ETL pipeline: extract from CSV, transform with pandas, and load to a new file with summaries.
+2. Data Joins and Merging - Merge multiple datasets (e.g., customers and transactions) and perform filtering based on join conditions.
+3. Window Functions with pandas - Use rolling or expanding windows to compute moving averages or cumulative sums.
+4. Data Pivoting and Unpivoting - Reshape a DataFrame using pivot_table() and melt() to switch between wide and long formats.
+5. Anomaly Detection in Time Series - Detect basic anomalies (e.g., outliers in daily sales) using z-scores or IQR methods.
 
-Hard topics (minimum 4 connecting functions):
-Trees
-Heaps
-Recursive Backtracking
-Graphs
-Dynamic Programming
+Hard
+1. Custom Data Pipeline with Validation - Build a multi-step data pipeline that includes ingestion, schema validation, transformations, and export.
+2. Sessionization of User Logs - Given timestamped log data, group actions into sessions using time-based thresholds (e.g., 30 mins idle = new session).
+3. Building a Star Schema from Flat Files - Normalize flat transactional data into fact and dimension tables using pandas.
+4. Large File Processing in Chunks - Read and process a large CSV file in chunks (e.g., chunksize in read_csv) while aggregating metrics.
+5. Data Quality Audit Report Generator - Write code to scan a dataset and output a summary report of missing values, unique counts, outlier checks, and type mismatches.
 """
 
+def generate_modified_code_prompt(original_code):
+    return f"""
+You are a coding interview maker. You are given a program with all the codes working. But as we are preparing a debugging activity for the interviewee, you are to modify the code given such that bugs can be introduced for the interviewee to spot and fix the bug to arrive back at the original code. It can be done by modifying a few lines to alter the code's logic or to even make it a syntax error. 
+
+Your output must be just the modified code itself.
+
+Note: Do NOT include any hints or comments about where the bug is.
+
+Given code:
+
+{original_code}
+"""
 
 
 # --- GROQ API CALL ---
@@ -113,11 +127,10 @@ def split_code_sections(full_code):
         hidden_test = match[1].strip()
         match = re.split(r'^\s*---BUGGY_CODE---\s*$', comment_with_code, maxsplit=1, flags=re.MULTILINE)
         if len(match) == 2:
-            visible_code = match[1].strip()
-            return visible_code, hidden_test
+            original_code = match[1].strip()
+            return original_code, hidden_test
         return comment_with_code, hidden_test # fallback 1
-    return full_code, ""  # fallback 2
-
+    return full_code, ""  # fallback 2 
 
 
 # --- VALIDATE FIX ---
@@ -137,10 +150,11 @@ def check_user_fix(user_code, test_code):
         else:
             return False, "❌ Test function 'test()' not found or not callable."
 
+    except AssertionError as e:
+        return False, f"❌ Your code has run successfully but has failed a test case. {str(e)}"
+
     except Exception as e:
-        return False, f"❌ Your code has run but isn't producing the correct output :( {str(e)}"
-
-
+        return False, f"❌ Your code has run into an error. {str(e)}"
 
 
 
@@ -156,9 +170,11 @@ if start:
     st.session_state.start_time = time.time()
 
     with st.spinner("Generating code..."):
-        prompt = generate_prompt(difficulty)
-        full_response = call_groq(prompt)
-        buggy_code, test_code = split_code_sections(full_response)
+        prompt_1 = generate_original_code_prompt(difficulty)
+        full_response = call_groq(prompt_1)
+        original_code, test_code = split_code_sections(full_response)
+        prompt_2 = generate_modified_code_prompt(original_code)
+        buggy_code = call_groq(prompt_2)
 
         st.session_state.code = buggy_code
         st.session_state.test_code = test_code
