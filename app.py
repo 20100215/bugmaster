@@ -198,7 +198,7 @@ if start:
         original_code, test_code = split_code_sections(full_response)
         prompt_2 = generate_modified_code_prompt(original_code)
         modified_code = call_groq(prompt_2)
-        buggy_code = extract_buggy_code(prompt_2)
+        buggy_code = extract_buggy_code(modified_code)
 
         st.session_state.code = buggy_code
         st.session_state.test_code = test_code
