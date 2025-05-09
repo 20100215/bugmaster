@@ -26,11 +26,11 @@ if "round_started" not in st.session_state:
 # --- PROMPT GENERATION ---
 def generate_prompt(difficulty):
     return f"""
-You are an expert Python coding tutor. Generate a Python function with a subtle bug that a student must fix.
+You are an expert Python coding tutor. Generate a Python function with a subtle bug that a tech expert must fix.
 
 ⚠️ RULES (Strict):
 1. At the top, write a short comment (start with a #) that explains what the function is supposed to do.
-2. Write one complete function with a small bug. This function MUST be called something meaningful like `calculate_sum`, `reverse_string`, or `binary_search`.
+2. Write one complete function (or a chain of complete functions) with a small bug. This function MUST be called something meaningful.
    - Include a docstring with the input and output formats
 3. Do NOT include any hints or comments about where the bug is.
 4. On a separate line, write exactly: ---HIDDEN_TEST---
