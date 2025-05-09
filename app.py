@@ -73,7 +73,7 @@ def test():
 Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following recommended topics (choose 2-3) based on the difficulty given:
 
 Easy
-1. CSV Data Cleaning - Load a CSV with missing or inconsistent values, clean the data (e.g., fill NAs, remove duplicates, fix data types).
+1. Basic programming - control structures such as conditional statements, loops, arrays, and other essemtial data types
 2. Basic Aggregations with pandas - Use groupby, mean, sum, and count to answer questions like "total sales by region".
 3. Datetime Parsing and Filtering - Parse a column of timestamps and filter rows within a specific time window.
 4. Sorting and Ranking - Sort datasets by multiple columns and add rank columns based on custom logic.
