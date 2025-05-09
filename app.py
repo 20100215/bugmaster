@@ -35,16 +35,16 @@ if "round_started" not in st.session_state:
 # --- PROMPT GENERATION ---
 def generate_original_code_prompt(difficulty):
     return f"""
-You are a coding interview maker. Generate a Python program containing multiple functions (that must be interrelated) that tackle common DSA problems.
+You are a coding interview maker. Generate a Python program containing function that tackle common DSA or data manipulation problems.
 
 ⚠️ RULES (Strict):
 1. At the top, write a short comment (start with a #) that explains what the program is supposed to do.
 2. On a separate line, write exactly: ---ORIGINAL_CODE--- 
-3. Write complete functions. The functions MUST be called something meaningful.
+3. Write a complete function. The function MUST be called something meaningful.
    - Include a docstring with the input and output formats
 4. On a separate line, write exactly: ---HIDDEN_TEST---
 5. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
-   - It should call the same functions you just wrote above.
+   - It should call the same function you just wrote above.
    - Include a few example cases and `assert` statements
    - If the test passes, print “Test passed!”
 
@@ -70,7 +70,7 @@ def test():
 
 ---
 
-Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following recommended topics (choose 2-3) based on the difficulty given:
+Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following recommended topics based on the difficulty given:
 
 Easy
 1. Basic programming - control structures such as conditional statements, loops, arrays, and other essemtial data types
@@ -92,6 +92,8 @@ Hard
 3. Building a Star Schema from Flat Files - Normalize flat transactional data into fact and dimension tables using pandas.
 4. Large File Processing in Chunks - Read and process a large CSV file in chunks (e.g., chunksize in read_csv) while aggregating metrics.
 5. Data Quality Audit Report Generator - Write code to scan a dataset and output a summary report of missing values, unique counts, outlier checks, and type mismatches.
+
+Note: do not call any file reading functions, but create the necessary dataframes manually in the test() function.
 """
 
 def generate_modified_code_prompt(original_code):
@@ -111,6 +113,8 @@ The format must look exactly like this:
 
 def func(...):
     ...
+
+---
 
 Given code:
 
