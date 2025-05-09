@@ -70,7 +70,7 @@ def test():
 
 ---
 
-Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following topics based on the difficulty given:
+Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following recommended topics (choose 2-3) based on the difficulty given:
 
 Easy
 1. CSV Data Cleaning - Load a CSV with missing or inconsistent values, clean the data (e.g., fill NAs, remove duplicates, fix data types).
@@ -98,13 +98,25 @@ def generate_modified_code_prompt(original_code):
     return f"""
 You are a coding interview maker. You are given a program with all the codes working. But as we are preparing a debugging activity for the interviewee, you are to modify the code given such that bugs can be introduced for the interviewee to spot and fix the bug to arrive back at the original code. It can be done by modifying a few lines to alter the code's logic or to even make it a syntax error. 
 
-Your output must be just the modified code itself.
+Rules:
+1. Your output must be just the modified code itself. 
+2. On a separate line before the modified code, write exactly: ---ORIGINAL_CODE--- 
+3. Do NOT include any hints or comments about where the bug is.
 
-Note: Do NOT include any hints or comments about where the bug is.
+The format must look exactly like this:
+
+# This function is supposed to ... 
+
+---MODIFIED_CODE---
+
+def func(...):
+    ...
 
 Given code:
 
 {original_code}
+
+
 """
 
 
@@ -134,13 +146,15 @@ def split_code_sections(full_code):
     if len(match) == 2:
         comment_with_code = match[0].strip()
         hidden_test = match[1].strip()
-        match = re.split(r'^\s*---BUGGY_CODE---\s*$', comment_with_code, maxsplit=1, flags=re.MULTILINE)
-        if len(match) == 2:
-            original_code = match[1].strip()
-            return original_code, hidden_test
-        return comment_with_code, hidden_test # fallback 1
-    return full_code, ""  # fallback 2 
+        return comment_with_code, hidden_test
+    return full_code, ""  # fallback 
 
+def extract_buggy_code(full_code):
+    match = re.split(r'^\s*---MODIFIED_CODE---\s*$', full_code, maxsplit=1, flags=re.MULTILINE)
+    if len(match) == 2:
+        modified_code = match[1].strip()
+        return modified_code
+    return full_code, ""  # fallback 
 
 # --- VALIDATE FIX ---
 
@@ -183,7 +197,8 @@ if start:
         full_response = call_groq(prompt_1)
         original_code, test_code = split_code_sections(full_response)
         prompt_2 = generate_modified_code_prompt(original_code)
-        buggy_code = call_groq(prompt_2)
+        modified_code = call_groq(prompt_2)
+        buggy_code = extract_buggy_code(prompt_2)
 
         st.session_state.code = buggy_code
         st.session_state.test_code = test_code
