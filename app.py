@@ -187,7 +187,7 @@ def check_user_fix(user_code, test_code):
         namespace = {}
 
         # Execute user code: this should define the function, e.g., calculate_sum
-        exec(f'{user_code} \n {test_code}', namespace)
+        exec(f'{user_code}\n\n\n{test_code}', namespace)
         
         # Check and call the test function
         if "test" in namespace and callable(namespace["test"]):
