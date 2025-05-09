@@ -227,17 +227,11 @@ if start:
 # --- CODE EDITOR ---
 if st.session_state.round_started:
     st.subheader("🧩 Debug This Code")
-    editor_result = code_editor(
-        st.session_state.code,
-        height=300,
-        lang="python",
-        theme="light",
-    )
+    user_code = st.text_area("Edit the broken code below:", value=st.session_state.code, height=400)
+
 
     if st.button("✅ Submit Fix"):
-        fixed_code = editor_result["text"]
-        st.write(editor_result)
-        st.write(st.session_state.code)
+        fixed_code = user_code
         success, error = check_user_fix(fixed_code, st.session_state.test_code)
         if success:
             duration = time.time() - st.session_state.start_time
