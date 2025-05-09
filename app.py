@@ -208,10 +208,9 @@ print(f"--- DEBUG: Initial editor value (user_code_string) length: {len(st.sessi
 print(f"--- DEBUG: Initial editor value (first 100 chars): {st.session_state.user_code_string[:100] if st.session_state.user_code_string else 'EMPTY'} ---") # Debug print
 
 
-# Use the code_editor component
-# Pass the string state variable (our source of truth for the code) to the editor for display
+# Use the code_editor component - Pass the string state variable as the FIRST POSITIONAL argument
 editor_return_value = code_editor(
-    value=st.session_state.user_code_string, # --- Display this content ---
+    st.session_state.user_code_string, # --- Use positional argument again ---
     lang="python",                     # Set language for syntax highlighting
     height=[20, 45],                   # Set initial and minimum height in rem
     key="code_editor_ace"              # Unique key for the component
@@ -233,33 +232,23 @@ else:
 
 
 # --- Update the string state variable based on the component's return ---
-# The component returns a dictionary {'text': '...'} when the content changes.
-# It might return other things on different interactions or initially.
-# We need to robustly get the latest text content from the return value.
+# (Keep this logic as is from the previous debug version)
 latest_editor_text = None
 if isinstance(editor_return_value, dict) and 'text' in editor_return_value:
      latest_editor_text = editor_return_value['text']
-     # print(f"--- DEBUG: Extracted text from dict, length: {len(latest_editor_text) if latest_editor_text else 0} ---") # Debug print
 elif isinstance(editor_return_value, str):
-     # This case might happen on initial load or simpler reruns where it returns just the string
      latest_editor_text = editor_return_value
-     # print(f"--- DEBUG: Using string directly, length: {len(latest_editor_text) if latest_editor_text else 0} ---") # Debug print
 
-
-# Update the source of truth (st.session_state.user_code_string)
-# only if the component returned valid text content that is DIFFERENT from the current state.
-# This prevents the state from being set to None or empty unnecessarily on reruns where the text hasn't changed.
 if latest_editor_text is not None and latest_editor_text != st.session_state.user_code_string:
      st.session_state.user_code_string = latest_editor_text
      print(f"--- DEBUG: Updated st.session_state.user_code_string to NEW length: {len(st.session_state.user_code_string) if st.session_state.user_code_string else 0} ---") # Debug print
 else:
-    # This happens on reruns where the text hasn't changed, or if the return value was None/unexpected
-    # print(f"--- DEBUG: st.session_state.user_code_string NOT updated. latest_editor_text is None or same as current state. ---") # Debug print
-    pass # Keep the current state
-
+    pass
 
 print(f"--- DEBUG: Final st.session_state.user_code_string length after update logic: {len(st.session_state.user_code_string) if st.session_state.user_code_string else 0} ---") # Debug print
 print(f"--- DEBUG: Finished Rendering Code Editor Section ---") # Debug print
+
+# ... (rest of your code) ...
 
 
 # --- Feedback Area ---
