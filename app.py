@@ -31,6 +31,7 @@ You are an expert Python coding tutor. Generate a Python function with a subtle 
 ⚠️ RULES (Strict):
 1. At the top, write a short comment that explains what the function is supposed to do.
 2. Write one complete function with a small bug. This function MUST be called something meaningful like `calculate_sum`, `reverse_string`, or `binary_search`.
+   - Include a docstring with the input and output formats
 3. Do NOT include any hints or comments about where the bug is.
 4. On a separate line, write exactly: ---HIDDEN_TEST---
 5. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
@@ -58,6 +59,10 @@ def test():
 ---
 
 Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly.
+
+Easy - 6-12 lines of code
+Medium - 15-25 lines of code
+Hard - 30-40 lines of code
 """
 
 
@@ -72,7 +77,7 @@ def call_groq(prompt):
     data = {
         "model": MODEL_NAME,
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
+        "temperature": 0.5,
     }
 
     response = requests.post(url, json=data, headers=headers)
