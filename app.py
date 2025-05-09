@@ -1,84 +1,42 @@
 import streamlit as st
-import time
-import os
-from groq import Groq
 from code_editor import code_editor
-import io
-import sys
-import re # Import regex for potential parsing
+import time
+import ast
+import traceback
+import os
+import requests
 
+# Constants
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Or set it manually
+MODEL_NAME = "llama3-8b-8192"
 
-# --- Configuration ---
-# You can use Streamlit secrets for the API key instead of hardcoding or prompting every time
-# Create a .streamlit/secrets.toml file with:
-# [groq]
-# api_key = "YOUR_GROQ_API_KEY"
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY") or st.secrets.get("groq_api_key")
-
-# --- Groq Client Initialization ---
-client = None
-if GROQ_API_KEY:
-    client = Groq(api_key=GROQ_API_KEY)
-else:
-    st.warning("Groq API key not found. Please add it to your Streamlit secrets or environment variables.")
-
-# --- Session State Initialization ---
-if 'game_started' not in st.session_state:
-    st.session_state.game_started = False
-if 'broken_code' not in st.session_state:
-    st.session_state.broken_code = ""
-if 'test_code' not in st.session_state:
-    st.session_state.test_code = ""
-if 'start_time' not in st.session_state:
+# Session state
+if "start_time" not in st.session_state:
     st.session_state.start_time = None
-if 'submit_enabled' not in st.session_state:
-    st.session_state.submit_enabled = False
-if 'last_code_edit_id' not in st.session_state:
-     st.session_state.last_code_edit_id = 'initial' # Unique ID for code editor state
-if 'editor_content' not in st.session_state:
-    st.session_state.editor_content = ""
+if "test_code" not in st.session_state:
+    st.session_state.test_code = ""
+if "code" not in st.session_state:
+    st.session_state.code = ""
+if "round_started" not in st.session_state:
+    st.session_state.round_started = False
 
 
-# --- AI Prompt Engineering ---
-def create_groq_prompt(difficulty):
-    """Creates the prompt for the Groq API based on difficulty."""
-    base_prompt = f"""
-You are a Python code generator designed for a debugging game.
-Your task is to generate a Python code snippet that contains ONE subtle bug.
-The code should be a single file, typically containing one main function that performs a task.
-The complexity of the task and the subtlety of the bug should match the '{difficulty}' difficulty level.
+# ---- Functions ----
 
-At the beginning of the code, include comments explaining the INTENDED logic of the code. DO NOT reveal the location or nature of the bug in these comments or anywhere in the main code block.
+def generate_prompt(difficulty):
+    return f"""
+You are an expert Python teacher.
 
-Crucially, you MUST also generate a separate Python function designed to test the main function. This test function should call the main function with specific inputs and use an `assert` statement to verify that the output is correct. This test function will NOT be shown to the user but will be used to check if their fix works.
+Your task is to generate Python code containing a subtle bug for the user to debug. Follow this format exactly:
 
-Provide your response in the following format:
+1. A **comment block** at the top explaining what the function is supposed to do.
+2. A **single Python function** that contains a logical bug.
+3. Include realistic variable names and logic for the chosen difficulty.
+4. Include a hidden test function **after the code**, clearly marked with `---HIDDEN_TEST---`.
 
-```python
-# Comments explaining the intended logic WITHOUT revealing the bug
+DO NOT point out the bug. DO NOT print anything inside the test.
 
-# Your broken Python code goes here.
-# It should contain one subtle bug relevant to the difficulty level.
-# Make sure it's a self-contained runnable script without external dependencies
-# beyond standard Python libraries like math, random, etc.
-
-# ---HIDDEN_TEST---
-
-# Your hidden test function goes here.
-# It should call the main function generated above and use assert.
-# Example:
-# def test_my_function():
-#     result = my_function(input_data)
-#     assert result == expected_output, f"Test failed! Expected {{expected_output}}, got {{result}}"
-#     print("Test passed!") # Or some other indicator
-#
-# # Call the test function
-# test_my_function()
-
-Ensure the main code block and the hidden test code block are clearly separated by the line ---HIDDEN_TEST---.
-The hidden test code block MUST contain a call to the test function so it executes when run.
-
-Difficulty Level: {difficulty}
+---
 
 Examples based on difficulty:
 
@@ -108,6 +66,7 @@ def test_calculate_sum():
 test_calculate_sum()
 
 --- MEDIUM ---
+
 # This code is intended to reverse a string.
 
 def reverse_string(s):
@@ -132,6 +91,7 @@ def test_reverse_string():
 test_reverse_string()
 
 --- HARD ---
+
 # This code is intended to implement a simple binary search algorithm
 # to find the index of a target value in a sorted list.
 # It should return the index if found, otherwise -1.
@@ -155,6 +115,7 @@ def binary_search(sorted_list, target):
 # print(binary_search(my_list, target))
 
 ---HIDDEN_TEST---
+
 def test_binary_search():
     test_list = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]
     test_cases = [(23, 5), (2, 0), (91, 9), (10, -1), (56, 7)]
@@ -165,186 +126,100 @@ def test_binary_search():
 
 test_binary_search()
 
-Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format.
+---
+
+Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly.
 """
-    return base_prompt
 
-# --- AI Code Generation Function ---
 
-def generate_broken_code(difficulty):
-    """Calls the Groq API to generate broken code and a hidden test."""
-    if not client:
-        st.error("Groq API client not initialized.")
-        return "", ""
+def call_groq(prompt):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": MODEL_NAME,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+    }
 
-    prompt = create_groq_prompt(difficulty)
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    result = response.json()
+    return result['choices'][0]['message']['content']
 
+
+def split_code_sections(code_response):
+    """
+    Separate user-visible buggy function and hidden test code.
+    """
     try:
-        with st.spinner(f"Generating a {difficulty} level debugging challenge..."):
-            chat_completion = client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are a helpful Python code generator for a debugging game."},
-                    {"role": "user", "content": prompt},
-                ],
-                model="llama3-8b-8192", # Or other available models like "mixtral-8x7b-32768", "llama3-70b-8192"
-                temperature=0.7, # Adjust temperature for creativity vs predictability
-            )
+        parts = code_response.strip().split("def test():")
+        buggy_code = parts[0].strip()
+        test_code = "def test():" + parts[1].strip()
+        return buggy_code, test_code
+    except IndexError:
+        return code_response, ""
 
-            response_text = chat_completion.choices[0].message.content
 
-            # Parse the response
-            # Look for the markdown code blocks and the separator
-            code_match = re.search(r"```python\n(.*?)\n```\s*---HIDDEN_TEST---\s*```python\n(.*?)\n```", response_text, re.S)
-
-            if code_match:
-                broken_code = code_match.group(1).strip()
-                test_code = code_match.group(2).strip()
-                st.success("Debugging challenge generated!")
-                return broken_code, test_code
-            else:
-                st.error("Failed to parse code generated by AI. Please try again.")
-                st.text("AI Response:")
-                st.text(response_text)
-                return "", ""
-
-    except Exception as e:
-        st.error(f"Error calling Groq API: {e}")
-        st.info("Please check your API key and ensure the model is available.")
-        return "", ""
-    
-# --- Code Execution and Testing ---
-def run_code_with_test(user_code, test_code):
-    """Executes the user's code combined with the hidden test function."""
-    # Combine the user's code and the hidden test code
-    full_code = user_code + "\n\n" + test_code
-
-    # Use io.StringIO to capture stdout and stderr
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
-    redirected_output = io.StringIO()
-    redirected_error = io.StringIO()
-    sys.stdout = redirected_output
-    sys.stderr = redirected_error
-
-    success = False
-    error_message = None
-    output = ""
-    errors = ""
-
+def check_user_fix(code_text, test_code):
     try:
-        # Execute the combined code
-        # Using exec is powerful but requires caution in real-world web apps
-        # For a self-contained game like this, it's acceptable.
-        exec(full_code, {}) # Use an empty dictionary for global/local namespace
-
-        # If execution reaches here without exception and the assert passed in test_code:
-        success = True
-
-    except AssertionError as e:
-        # Caught an assertion error from the test function
-        success = False
-        error_message = f"Tests failed: {e}"
+        full_code = code_text + "\n\n" + test_code
+        local_env = {}
+        exec(full_code, {}, local_env)
+        local_env["test"]()
+        return True, None
     except Exception as e:
-        # Caught any other runtime error
-        success = False
-        error_message = f"An error occurred during execution: {type(e).__name__}: {e}"
-    finally:
-        # Restore stdout and stderr
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
+        return False, traceback.format_exc()
 
-        # Get captured output
-        output = redirected_output.getvalue()
-        errors = redirected_error.getvalue()
 
-    return success, error_message, output, errors
+# ---- UI ----
 
-# --- Streamlit App Layout ---
-st.title("🐛 Debug the Code Game! 🐞")
+st.title("🧠 AI Debugging Practice Game")
+st.markdown("Practice debugging AI-generated Python code. Choose a difficulty and start!")
 
-if not GROQ_API_KEY:
-    st.warning("Please add your Groq API key to .streamlit/secrets.toml or environment variables to play.")
+difficulty = st.selectbox("Select difficulty", ["Easy", "Medium", "Hard"])
+start_btn = st.button("🚀 Start Round")
 
-st.sidebar.header("Game Settings")
-difficulty = st.sidebar.selectbox(
-    "Select Difficulty:",
-    ("Easy", "Medium", "Hard")
-)
-
-if st.sidebar.button("Start New Round", disabled=not GROQ_API_KEY):
-    st.session_state.game_started = True
-    st.session_state.submit_enabled = False # Disable submit while generating
-    st.session_state.broken_code = "" # Clear previous code display
-    st.session_state.test_code = ""
-    st.session_state.start_time = None
-    st.session_state.editor_content = "" # Clear editor content visually
-    st.session_state.last_code_edit_id = f'round_{int(time.time())}' # New ID for fresh editor state
-
-# Generate code and update state
-broken_code, test_code = generate_broken_code(difficulty)
-if broken_code and test_code:
-    st.session_state.broken_code = broken_code
-    st.session_state.test_code = test_code
-    st.session_state.editor_content = broken_code # Set initial editor content
+if start_btn:
+    st.session_state.round_started = True
     st.session_state.start_time = time.time()
-    st.session_state.submit_enabled = True
-    st.rerun() # Rerun to display the code editor
-st.markdown("Fix the code in the editor below so it passes the hidden tests!")
 
-# --- Code Editor ---
-if st.session_state.game_started:
-    # Use the state variable to control the initial value
-    # The return value gives the current content whenever it changes
-    # We only need the current value when the user clicks submit
-    editor_response = code_editor(
-        st.session_state.editor_content, # Use editor_content for initial state
-        lang="python",
+    with st.spinner("Generating broken code..."):
+        prompt = generate_prompt(difficulty)
+        ai_response = call_groq(prompt)
+        buggy_code, test_code = split_code_sections(ai_response)
+
+        st.session_state.code = buggy_code
+        st.session_state.test_code = test_code
+
+
+# Code editor
+editor_result = None
+if st.session_state.round_started:
+    st.markdown("### 🧩 Debug this code")
+    editor_result = code_editor(
+        value=st.session_state.code,
         height=300,
-        key=st.session_state.last_code_edit_id # Use key to force re-render on new round
+        language="python",
+        theme="light",
     )
-    # Update editor_content state only if the content actually changed in the editor
-    # This prevents the editor from resetting while the user types
-    if editor_response != st.session_state.editor_content:
-        st.session_state.editor_content = editor_response
 
-    # --- Submit Button ---
-    if st.button("Submit Code", disabled=not st.session_state.submit_enabled):
-        if st.session_state.start_time is None:
-            st.error("Game not started. Please click 'Start New Round'.")
-        elif not st.session_state.test_code:
-            st.error("No test code available. Something went wrong. Try 'Start New Round' again.")
-        else:
-            current_code = st.session_state.editor_content # Get current content from state
-
-            success, error_message, output, errors = run_code_with_test(
-                current_code,
-                st.session_state.test_code
-            )
-
-            if success:
-                end_time = time.time()
-                time_taken = end_time - st.session_state.start_time
-                st.balloons()
-                st.success(f"🎉 Congratulations! You successfully debugged the code in {time_taken:.2f} seconds!")
-                st.write("Output from tests:")
-                st.code(output)
-                # Reset game state
-                st.session_state.game_started = False
-                st.session_state.submit_enabled = False
-                st.session_state.broken_code = ""
-                st.session_state.test_code = ""
-                st.session_state.start_time = None
-                st.session_state.editor_content = "" # Clear visual editor content
-                st.session_state.last_code_edit_id = 'initial' # Reset key
-            else:
-                st.error("🐛 Code is not yet correct. Keep debugging!")
-                if error_message:
-                    st.warning(f"Details: {error_message}")
-                if output:
-                    st.write("Output:")
-                    st.code(output)
-                if errors:
-                    st.write("Errors (stderr):")
-                    st.code(errors)
+    submit_btn = st.button("✅ Submit Fix")
 else:
-    st.info("Select a difficulty and click 'Start New Round' to begin!")
+    st.markdown("ℹ️ Click 'Start Round' to begin.")
+
+
+# Submit handling
+if st.session_state.round_started and editor_result and st.button("✅ Submit", key="submit_btn"):
+    fixed_code = editor_result["text"]
+    success, error = check_user_fix(fixed_code, st.session_state.test_code)
+    if success:
+        duration = time.time() - st.session_state.start_time
+        st.success(f"🎉 Congratulations, you successfully debugged the code in {duration:.2f} seconds!")
+        st.balloons()
+        st.session_state.round_started = False  # Reset
+    else:
+        st.error("❌ Still broken! Here's the error trace:")
+        st.code(error, language="python")
