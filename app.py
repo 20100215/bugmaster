@@ -5,7 +5,7 @@ import sys
 import os
 from groq import Groq
 # Import the code editor component
-from streamlit_code_editor import code_editor
+from code_editor import code_editor
 
 # --- Configuration ---
 MODEL_NAME = "llama3-8b-8192" # Or other suitable Groq model
