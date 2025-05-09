@@ -202,7 +202,7 @@ if st.session_state.round_started:
     editor_result = code_editor(
         st.session_state.code,
         height=300,
-        language="python",
+        lang="python",
         theme="light",
     )
 
