@@ -58,12 +58,12 @@ Examples based on difficulty:
 
 --- EASY ---
 
-# This code is intended to calculate the sum of all numbers in a list.
+# This code is intended to calculate the sum of all numbers in a list, but it is wrong.
 
 def calculate_sum(numbers):
     total = 0
     for number in numbers:
-        total -= number # Intentional bug: should be +=
+        total -= number 
     return total
 
 # Example usage (won't be executed by user directly)
@@ -83,12 +83,12 @@ test()
 
 --- MEDIUM ---
 
-# This code is intended to reverse a string.
+# This code is intended to reverse a string, but it is wrong.
 
 def reverse_string(s):
     reversed_s = ""
     for i in range(len(s)):
-        reversed_s += s[i] # Intentional bug: should append from the end
+        reversed_s += s[i] 
     return reversed_s
 
 # Example usage
@@ -109,7 +109,7 @@ test()
 --- HARD ---
 
 # This code is intended to implement a simple binary search algorithm
-# to find the index of a target value in a sorted list.
+# to find the index of a target value in a sorted list, but it is wrong.
 # It should return the index if found, otherwise -1.
 
 def binary_search(sorted_list, target):
@@ -120,9 +120,9 @@ def binary_search(sorted_list, target):
         if sorted_list[mid] == target:
             return mid
         elif sorted_list[mid] < target:
-            high = mid - 1 # Intentional bug: should be low = mid + 1
+            high = mid - 1 
         else:
-            low = mid + 1 # Intentional bug: should be high = mid - 1
+            low = mid + 1 
     return -1
 
 # Example usage
