@@ -1,16 +1,17 @@
 import streamlit as st
 from code_editor import code_editor
 import time
-import ast
 import traceback
 import os
 import requests
 
-# Constants
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Or set it manually
+# --- CONFIG ---
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Use env or hardcode
 MODEL_NAME = "llama3-8b-8192"
 
-# Session state
+# --- STATE SETUP ---
+st.set_page_config(page_title="BugMaster", layout="centered")
+
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
 if "test_code" not in st.session_state:
@@ -21,8 +22,7 @@ if "round_started" not in st.session_state:
     st.session_state.round_started = False
 
 
-# ---- Functions ----
-
+# --- PROMPT GENERATION ---
 def generate_prompt(difficulty):
     return f"""
 You are an expert Python teacher.
@@ -132,6 +132,8 @@ Now, generate the broken code and hidden test function for the '{difficulty}' di
 """
 
 
+
+# --- GROQ API CALL ---
 def call_groq(prompt):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -150,76 +152,68 @@ def call_groq(prompt):
     return result['choices'][0]['message']['content']
 
 
-def split_code_sections(code_response):
-    """
-    Separate user-visible buggy function and hidden test code.
-    """
-    try:
-        parts = code_response.strip().split("def test():")
-        buggy_code = parts[0].strip()
-        test_code = "def test():" + parts[1].strip()
-        return buggy_code, test_code
-    except IndexError:
-        return code_response, ""
+# --- SPLIT CODE ---
+def split_code_sections(full_code):
+    parts = full_code.split('---HIDDEN_TEST---')
+    visible_code = parts[0].strip()
+    hidden_test = parts[1].strip() if len(parts) > 1 else ""
+    return visible_code, hidden_test
 
 
-def check_user_fix(code_text, test_code):
+# --- VALIDATE FIX ---
+def check_user_fix(user_code, test_code):
     try:
-        full_code = code_text + "\n\n" + test_code
-        local_env = {}
-        exec(full_code, {}, local_env)
-        local_env["test"]()
-        return True, None
+        namespace = {}
+        exec(user_code, namespace)
+        exec(test_code, namespace)
+        if "test" in namespace:
+            namespace["test"]()
+            return True, None
+        else:
+            return False, "Test function not found."
     except Exception as e:
         return False, traceback.format_exc()
 
 
-# ---- UI ----
+# --- UI START ---
+st.title("🐞 BugMaster: AI Code Debugging Game")
+st.markdown("Test your debugging skills on AI-generated broken code. Choose a difficulty and start!")
 
-st.title("🧠 AI Debugging Practice Game")
-st.markdown("Practice debugging AI-generated Python code. Choose a difficulty and start!")
+difficulty = st.selectbox("Choose Difficulty", ["Easy", "Medium", "Hard"])
+start = st.button("🚀 Start Round")
 
-difficulty = st.selectbox("Select difficulty", ["Easy", "Medium", "Hard"])
-start_btn = st.button("🚀 Start Round")
-
-if start_btn:
+if start:
     st.session_state.round_started = True
     st.session_state.start_time = time.time()
 
-    with st.spinner("Generating broken code..."):
+    with st.spinner("Generating code..."):
         prompt = generate_prompt(difficulty)
-        ai_response = call_groq(prompt)
-        buggy_code, test_code = split_code_sections(ai_response)
+        full_response = call_groq(prompt)
+        buggy_code, test_code = split_code_sections(full_response)
 
         st.session_state.code = buggy_code
         st.session_state.test_code = test_code
 
-
-# Code editor
-editor_result = None
+# --- CODE EDITOR ---
 if st.session_state.round_started:
-    st.markdown("### 🧩 Debug this code")
+    st.subheader("🧩 Debug This Code")
     editor_result = code_editor(
-        st.session_state.code,
+        value=st.session_state.code,
         height=300,
-        lang="python",
+        language="python",
         theme="light",
     )
 
-    submit_btn = st.button("✅ Submit Fix")
+    if st.button("✅ Submit Fix"):
+        fixed_code = editor_result["text"]
+        success, error = check_user_fix(fixed_code, st.session_state.test_code)
+        if success:
+            duration = time.time() - st.session_state.start_time
+            st.success(f"🎉 Congratulations! You fixed the bug in {duration:.2f} seconds.")
+            st.balloons()
+            st.session_state.round_started = False
+        else:
+            st.error("❌ The bug is still there!")
+            st.code(error, language="python")
 else:
-    st.markdown("ℹ️ Click 'Start Round' to begin.")
-
-
-# Submit handling
-if st.session_state.round_started and editor_result and st.button("✅ Submit", key="submit_btn"):
-    fixed_code = editor_result["text"]
-    success, error = check_user_fix(fixed_code, st.session_state.test_code)
-    if success:
-        duration = time.time() - st.session_state.start_time
-        st.success(f"🎉 Congratulations, you successfully debugged the code in {duration:.2f} seconds!")
-        st.balloons()
-        st.session_state.round_started = False  # Reset
-    else:
-        st.error("❌ Still broken! Here's the error trace:")
-        st.code(error, language="python")
+    st.info("Click 'Start Round' to begin.")
