@@ -4,13 +4,16 @@ import subprocess
 import sys
 import os
 from groq import Groq
+# Import the code editor component
+from streamlit_code_editor import code_editor
 
 # --- Configuration ---
-MODEL_NAME = "llama-3.3-70b-versatile" # Or other suitable Groq model
+MODEL_NAME = "llama3-8b-8192" # Or other suitable Groq model
 SUCCESS_INDICATOR = "DEBUGGING_SUCCESSFUL" # String the AI-generated code should print on success
 EXECUTION_TIMEOUT = 10 # seconds
 
 # --- Groq Client Initialization ---
+# ... (keep your Groq client initialization code) ...
 try:
     groq_api_key = st.secrets["GROQ_API_KEY"]
     client = Groq(api_key=groq_api_key)
@@ -21,10 +24,11 @@ except Exception as e:
     st.error(f"Failed to initialize Groq client: {e}")
     st.stop()
 
-# --- Helper Functions ---
 
+# --- Helper Functions ---
+# ... (keep your generate_broken_code and run_code_safely functions) ...
 def generate_broken_code(difficulty):
-    """Generates broken Python code using the Groq API."""
+    # ... (your existing generate_broken_code function) ...
     prompt = f"""
 You are a Python coding expert tasked with generating broken Python code for a debugging game.
 The code should have intentional bugs that the user needs to fix.
@@ -89,6 +93,7 @@ def run_code_safely(code):
     except Exception as e:
         return -1, "", f"An unexpected error occurred during execution: {e}"
 
+
 # --- Streamlit App Layout ---
 
 st.title("Python Debugging Game")
@@ -109,6 +114,10 @@ if 'user_code' not in st.session_state:
     st.session_state.user_code = ""
 if 'feedback' not in st.session_state:
     st.session_state.feedback = ""
+# Add a state variable to store the code editor content
+if 'editor_content' not in st.session_state:
+    st.session_state.editor_content = ""
+
 
 # --- Difficulty Selection ---
 difficulty = st.selectbox(
@@ -126,17 +135,22 @@ with col1:
         st.session_state.feedback = "Generating code..."
         st.session_state.user_code = "" # Clear previous code
         st.session_state.broken_code = "" # Clear previous broken code
+        st.session_state.editor_content = "" # Clear editor content
+
 
         broken_code = generate_broken_code(difficulty)
 
         if broken_code:
             st.session_state.broken_code = broken_code
-            st.session_state.user_code = broken_code # Load broken code into editor
+            st.session_state.user_code = broken_code # Store for submission
+            st.session_state.editor_content = broken_code # Load broken code into editor
             st.session_state.start_time = time.time()
             st.session_state.feedback = f"Round started! Fix the code below ({difficulty} difficulty)."
         else:
              st.session_state.game_active = False # Disable if generation failed
              st.session_state.feedback = "Failed to generate code. Please try again."
+
+        st.rerun() # Rerun to update UI immediately
 
 
 with col2:
@@ -145,7 +159,8 @@ with col2:
     if st.button("Submit Code", disabled=submit_disabled):
         # Code to run when submit is clicked
         st.session_state.feedback = "Running your code..."
-        user_code_to_run = st.session_state.user_code # Use code from session state
+        # Get code from the editor state
+        user_code_to_run = st.session_state.editor_content
 
         return_code, stdout, stderr = run_code_safely(user_code_to_run)
 
@@ -157,6 +172,10 @@ with col2:
             st.success(f"Congratulations! You successfully debugged the code in {duration:.2f} seconds!")
             st.session_state.feedback = "" # Clear feedback
             st.session_state.start_time = None # Reset timer
+            st.session_state.broken_code = "" # Clear code states for next round
+            st.session_state.user_code = ""
+            st.session_state.editor_content = ""
+
         elif return_code != 0:
              st.session_state.feedback = f"Execution failed:\n\n{stderr}"
         else: # return_code is 0 but success indicator not found
@@ -170,17 +189,24 @@ with col2:
 if st.session_state.game_active and st.session_state.start_time is not None:
     # Calculate and display elapsed time on each rerun
     elapsed_time = time.time() - st.session_state.start_time
-    st.metric("Time Elapsed", f"{elapsed_time:.2f} seconds")
+    # Use st.empty to update the timer in place if possible, otherwise st.write is fine
+    timer_placeholder = st.empty()
+    timer_placeholder.metric("Time Elapsed", f"{elapsed_time:.2f} seconds")
 
 
 # --- Code Editor ---
-# Update session state when text area changes
-st.session_state.user_code = st.text_area(
-    "Code Editor",
-    st.session_state.user_code,
-    height=400,
-    key="code_editor" # Add a key for the text area
+st.markdown("### Code Editor") # Add a title for the editor area
+
+# Use the code_editor component
+# The component returns the current content when the script reruns
+# We update st.session_state.editor_content with the returned value
+st.session_state.editor_content = code_editor(
+    st.session_state.editor_content, # Pass the current content
+    lang="python",                   # Set language for syntax highlighting
+    height=[20, 45],                 # Set initial and minimum height in rem
+    key="code_editor_ace"            # Unique key for the component
 )
+
 
 # --- Feedback Area ---
 if st.session_state.feedback:
@@ -195,7 +221,7 @@ st.markdown("""
 3. Read the comments to understand the intended logic.
 4. Edit the code in the editor to fix the bugs.
 5. Click "Submit Code" to run your corrected code.
-6. Keep submitting until your code runs successfully and prints the expected output!
+6. Keep submitting until your code runs successfully and prints the expected output (`DEBUGGING_SUCCESSFUL`).
 
 **Note on Code Execution:** Your code is run in a sandboxed environment with a timeout for safety.
 The AI-generated code is expected to print the specific string `DEBUGGING_SUCCESSFUL` when it runs correctly according to its intended logic. The game checks for this string in the output to confirm success.
