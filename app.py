@@ -26,15 +26,16 @@ if "round_started" not in st.session_state:
 # --- PROMPT GENERATION ---
 def generate_prompt(difficulty):
     return f"""
-You are a coding interview maker. Generate a Python function (or if Medium and hard difficulty - more complex code with more sub functions) with bugs that a tech expert must fix.
+You are a coding interview maker. Generate a Python program containing functions with bugs that a tech expert must fix.
 
 ⚠️ RULES (Strict):
-1. At the top, write a short comment (start with a #) that explains what the function is supposed to do.
-2. Write one complete function (or a chain of complete functions) with a bug. This function MUST be called something meaningful.
+1. At the top, write a short comment (start with a #) that explains what the program is supposed to do.
+2. On a separate line, write exactly: ---BUGGY_CODE--- 
+3. Write complete functions with bug/s. The functions MUST be called something meaningful.
    - Include a docstring with the input and output formats
-3. Do NOT include any hints or comments about where the bug is.
-4. On a separate line, write exactly: ---HIDDEN_TEST---
-5. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
+4. Do NOT include any hints or comments about where the bug is.
+5. On a separate line, write exactly: ---HIDDEN_TEST---
+6. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
    - It should call the same function you just wrote above.
    - Include a few example cases and `assert` statements
    - If the test passes, print “Test passed!”
@@ -45,6 +46,9 @@ You are a coding interview maker. Generate a Python function (or if Medium and h
 The format must look exactly like this:
 
 # This function is supposed to ... 
+
+---BUGGY_CODE---
+
 def func(...):
     ...
 
@@ -60,18 +64,18 @@ def test():
 
 Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following topics based on the difficulty given:
 
-Easy topics: 
+Easy topics (minimum 2 connecting functions): 
 Arrays & Strings
 Hashmaps & Sets
 Stacks
 
-Medium topics:
+Medium topics (minimum 3 connecting functions):
 2 Pointers
 Linked Lists
 Binary Search
 Sliding Window
 
-Hard topics:
+Hard topics (minimum 4 connecting functions):
 Trees
 Heaps
 Recursive Backtracking
@@ -105,14 +109,19 @@ def call_groq(prompt):
 def split_code_sections(full_code):
     match = re.split(r'^\s*---HIDDEN_TEST---\s*$', full_code, maxsplit=1, flags=re.MULTILINE)
     if len(match) == 2:
-        visible_code = match[0].strip()
+        comment_with_code = match[0].strip()
         hidden_test = match[1].strip()
-        return visible_code, hidden_test
-    return full_code, ""  # fallback
+        match = re.split(r'^\s*---BUGGY_CODE---\s*$', comment_with_code, maxsplit=1, flags=re.MULTILINE)
+        if len(match) == 2:
+            visible_code = match[1].strip()
+            return visible_code, hidden_test
+        return comment_with_code, hidden_test # fallback 1
+    return full_code, ""  # fallback 2
 
 
 
 # --- VALIDATE FIX ---
+
 def check_user_fix(user_code, test_code):
     try:
         # Initialize the namespace
