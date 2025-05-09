@@ -237,6 +237,7 @@ if st.session_state.round_started:
     if st.button("✅ Submit Fix"):
         fixed_code = editor_result["text"]
         st.write(editor_result)
+        st.write(st.session_state.code)
         success, error = check_user_fix(fixed_code, st.session_state.test_code)
         if success:
             duration = time.time() - st.session_state.start_time
