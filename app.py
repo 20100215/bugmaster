@@ -5,7 +5,7 @@ import sys
 import os
 from groq import Groq
 # Import the code editor component
-from code_editor import code_editor
+from streamlit_code_editor import code_editor # Make sure this is installed
 
 # --- Configuration ---
 MODEL_NAME = "llama3-8b-8192" # Or other suitable Groq model
@@ -13,7 +13,6 @@ SUCCESS_INDICATOR = "DEBUGGING_SUCCESSFUL" # String the AI-generated code should
 EXECUTION_TIMEOUT = 10 # seconds
 
 # --- Groq Client Initialization ---
-# ... (keep your Groq client initialization code) ...
 try:
     groq_api_key = st.secrets["GROQ_API_KEY"]
     client = Groq(api_key=groq_api_key)
@@ -28,7 +27,6 @@ except Exception as e:
 # --- Helper Functions ---
 # ... (keep your generate_broken_code and run_code_safely functions) ...
 def generate_broken_code(difficulty):
-    # ... (your existing generate_broken_code function) ...
     prompt = f"""
 You are a Python coding expert tasked with generating broken Python code for a debugging game.
 The code should have intentional bugs that the user needs to fix.
@@ -80,7 +78,7 @@ def run_code_safely(code):
         # Use subprocess to run the code string with the current python executable
         # -c flag executes the command string
         result = subprocess.run(
-            [sys.executable, "-c", code],
+            [sys.executable, "-c", code], # 'code' must be a string here
             capture_output=True, # Capture stdout and stderr
             text=True,         # Decode stdout and stderr as text
             timeout=EXECUTION_TIMEOUT # Set a timeout
@@ -91,6 +89,10 @@ def run_code_safely(code):
     except subprocess.TimeoutExpired:
         return -1, "", f"Error: Code execution timed out after {EXECUTION_TIMEOUT} seconds."
     except Exception as e:
+        # Log the unexpected error type for debugging
+        st.error(f"An unexpected error occurred during execution: {e}")
+        import traceback
+        st.error(traceback.format_exc()) # Display full traceback in Streamlit for more info
         return -1, "", f"An unexpected error occurred during execution: {e}"
 
 
@@ -108,15 +110,11 @@ if 'game_active' not in st.session_state:
     st.session_state.game_active = False
 if 'start_time' not in st.session_state:
     st.session_state.start_time = None
-if 'broken_code' not in st.session_state:
-    st.session_state.broken_code = ""
-if 'user_code' not in st.session_state:
-    st.session_state.user_code = ""
+# We will use this variable to store the actual code STRING from the editor
+if 'user_code_string' not in st.session_state:
+    st.session_state.user_code_string = ""
 if 'feedback' not in st.session_state:
     st.session_state.feedback = ""
-# Add a state variable to store the code editor content
-if 'editor_content' not in st.session_state:
-    st.session_state.editor_content = ""
 
 
 # --- Difficulty Selection ---
@@ -133,18 +131,16 @@ with col1:
     if st.button("Start Round", disabled=st.session_state.game_active):
         st.session_state.game_active = True
         st.session_state.feedback = "Generating code..."
-        st.session_state.user_code = "" # Clear previous code
-        st.session_state.broken_code = "" # Clear previous broken code
-        st.session_state.editor_content = "" # Clear editor content
+        st.session_state.user_code_string = "" # Clear previous code string
+        st.session_state.start_time = None # Clear timer initially
 
 
         broken_code = generate_broken_code(difficulty)
 
         if broken_code:
-            st.session_state.broken_code = broken_code
-            st.session_state.user_code = broken_code # Store for submission
-            st.session_state.editor_content = broken_code # Load broken code into editor
-            st.session_state.start_time = time.time()
+            # Load the generated broken code into the state variable that holds the string
+            st.session_state.user_code_string = broken_code
+            st.session_state.start_time = time.time() # Start the timer NOW
             st.session_state.feedback = f"Round started! Fix the code below ({difficulty} difficulty)."
         else:
              st.session_state.game_active = False # Disable if generation failed
@@ -157,10 +153,12 @@ with col2:
     # Submit button is disabled initially and re-enabled after starting a round
     submit_disabled = not st.session_state.game_active
     if st.button("Submit Code", disabled=submit_disabled):
-        # Code to run when submit is clicked
         st.session_state.feedback = "Running your code..."
-        # Get code from the editor state
-        user_code_to_run = st.session_state.editor_content
+
+        # --- Get code from the state variable holding the string ---
+        # This variable is updated by the code_editor component's return value below
+        user_code_to_run = st.session_state.user_code_string
+        # ---------------------------------------------------------
 
         return_code, stdout, stderr = run_code_safely(user_code_to_run)
 
@@ -171,41 +169,61 @@ with col2:
             st.balloons()
             st.success(f"Congratulations! You successfully debugged the code in {duration:.2f} seconds!")
             st.session_state.feedback = "" # Clear feedback
-            st.session_state.start_time = None # Reset timer
-            st.session_state.broken_code = "" # Clear code states for next round
-            st.session_state.user_code = ""
-            st.session_state.editor_content = ""
+            # Clear code states for next round
+            st.session_state.user_code_string = ""
+            st.session_state.start_time = None # Reset timer display
 
         elif return_code != 0:
              st.session_state.feedback = f"Execution failed:\n\n{stderr}"
         else: # return_code is 0 but success indicator not found
              st.session_state.feedback = f"Code ran without crashing, but the success condition ('{SUCCESS_INDICATOR}') was not met.\n\nStandard Output:\n{stdout}\n\nStandard Error:\n{stderr if stderr else 'None'}"
 
-        # Rerun to update feedback and button state
-        st.rerun()
+        st.rerun() # Rerun to update feedback and button state
 
 
 # --- Timer Display ---
 if st.session_state.game_active and st.session_state.start_time is not None:
-    # Calculate and display elapsed time on each rerun
     elapsed_time = time.time() - st.session_state.start_time
     # Use st.empty to update the timer in place if possible, otherwise st.write is fine
-    timer_placeholder = st.empty()
-    timer_placeholder.metric("Time Elapsed", f"{elapsed_time:.2f} seconds")
+    # timer_placeholder = st.empty() # Uncomment if you want the timer to try and update in place
+    # timer_placeholder.metric("Time Elapsed", f"{elapsed_time:.2f} seconds") # Uncomment if using placeholder
+    st.metric("Time Elapsed", f"{elapsed_time:.2f} seconds") # Display timer on each rerun
 
 
 # --- Code Editor ---
-st.markdown("### Code Editor") # Add a title for the editor area
+st.markdown("### Code Editor")
 
 # Use the code_editor component
-# The component returns the current content when the script reruns
-# We update st.session_state.editor_content with the returned value
-st.session_state.editor_content = code_editor(
-    st.session_state.editor_content, # Pass the current content
-    lang="python",                   # Set language for syntax highlighting
-    height=[20, 45],                 # Set initial and minimum height in rem
-    key="code_editor_ace"            # Unique key for the component
+# Pass the string state variable (our source of truth for the code) to the editor for display
+editor_return_value = code_editor(
+    st.session_state.user_code_string, # --- Display this content ---
+    lang="python",                     # Set language for syntax highlighting
+    height=[20, 45],                   # Set initial and minimum height in rem
+    key="code_editor_ace"              # Unique key for the component
+    # Add options like:
+    # theme="dracula", # Example theme
+    # readonly=False,
+    # wordwrap=True
 )
+
+# --- Update the string state variable based on the component's return ---
+# The component returns a dictionary {'text': '...'} when the content changes.
+# It might return other things on different interactions or initially.
+# We need to robustly get the latest text content from the return value.
+latest_editor_text = None
+if isinstance(editor_return_value, dict) and 'text' in editor_return_value:
+     latest_editor_text = editor_return_value['text']
+elif isinstance(editor_return_value, str):
+     # This case might happen on initial load or simpler reruns where it returns just the string
+     latest_editor_text = editor_return_value
+
+# Update the source of truth (st.session_state.user_code_string)
+# only if the component returned valid text content.
+if latest_editor_text is not None:
+     st.session_state.user_code_string = latest_editor_text
+# If the component returned something else (e.g., just None or a different structure),
+# we simply keep the current value of st.session_state.user_code_string.
+# --------------------------------------------------------------------
 
 
 # --- Feedback Area ---
