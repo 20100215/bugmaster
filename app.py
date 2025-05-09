@@ -38,24 +38,22 @@ def generate_original_code_prompt(difficulty):
 You are a coding interview maker. Generate a Python program containing function that tackle common DSA or data manipulation problems.
 
 ⚠️ RULES (Strict):
-1. At the top, write a short comment (start with a #) that explains what the program is supposed to do.
-2. On a separate line, write exactly: ---ORIGINAL_CODE--- 
-3. Write a complete function. The function MUST be called something meaningful.
+1. On a separate line, write exactly: ---ORIGINAL_CODE--- 
+2. Write a complete function. The function MUST be called something meaningful.
    - Include a docstring with the input and output formats
-4. On a separate line, write exactly: ---HIDDEN_TEST---
-5. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
+3. On a separate line, write exactly: ---HIDDEN_TEST---
+4. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
    - It should call the same function you just wrote above.
    - Include a few example cases and `assert` statements
    - If the test passes, print “Test passed!”
-6. Make sure the output is formatted as if it is a code file, do not display any "\n"s. 
-7. Include all necessary imports in the original code.
+5. Make sure the output is formatted as if it is a code file, do not display any "\n"s. 
+6. Include all necessary imports in the original code.
+7. No other discussions or comments beyond the two code snippets please, as they will be directly fed to the code editor and also the checker, otherwise an error will be flagged due to the extra sentences.
 
 ❌ Do NOT change function names between the original code and the test.
 ✅ DO name the test function exactly: `test()`
 
-The format must look exactly like this:
-
-# This function is supposed to ... 
+The format must look exactly like this: 
 
 ---ORIGINAL_CODE---
 
@@ -68,7 +66,6 @@ def test():
     result = func(....)
     assert result == ...
     print("Test passed!")
-
 
 ---
 
@@ -106,10 +103,11 @@ Rules:
 1. Your output must be just the modified code itself. 
 2. On a separate line before the modified code, write exactly: ---ORIGINAL_CODE--- 
 3. Do NOT include any hints or comments about where the bug is.
+4. Make sure the output is formatted as if it is a code file, do not display any "\n"s. 
+5. Include all necessary imports in the original code.
+6. No other discussions or comments beyond the two code snippets please, as they will be directly fed to the code editor and also the checker, otherwise an error will be flagged due to the extra sentences.
 
 The format must look exactly like this:
-
-# This function is supposed to ... 
 
 ---MODIFIED_CODE---
 
