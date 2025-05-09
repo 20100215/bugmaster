@@ -183,17 +183,29 @@ def split_code_sections(full_code):
 # --- VALIDATE FIX ---
 def check_user_fix(user_code, test_code):
     try:
+        # Initialize the namespace
         namespace = {}
-        # Combine user code and test code in same scope
-        exec(user_code + "\n" + test_code, namespace)
 
+        # Execute user code: this should define the function, e.g., calculate_sum
+        exec(user_code, namespace)
+
+        # Check if the function is defined in the namespace
+        if "calculate_sum" not in namespace:
+            return False, "❌ User code didn't define 'calculate_sum'."
+        
+        # Execute the test code in the same namespace
+        exec(test_code, namespace)
+
+        # Check and call the test function
         if "test" in namespace and callable(namespace["test"]):
             namespace["test"]()
             return True, None
         else:
-            return False, "❌ Test function not found or not callable."
-    except Exception:
-        return False, traceback.format_exc()
+            return False, "❌ Test function 'test()' not found or not callable."
+
+    except Exception as e:
+        return False, f"❌ An error occurred: {str(e)}"
+
 
 
 
