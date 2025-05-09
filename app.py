@@ -187,15 +187,8 @@ def check_user_fix(user_code, test_code):
         namespace = {}
 
         # Execute user code: this should define the function, e.g., calculate_sum
-        exec(user_code, namespace)
-
-        # Check if the function is defined in the namespace
-        if "calculate_sum" not in namespace:
-            return False, "❌ User code didn't define 'calculate_sum'."
+        exec(f'{user_code} \n {test_code}', namespace)
         
-        # Execute the test code in the same namespace
-        exec(test_code, namespace)
-
         # Check and call the test function
         if "test" in namespace and callable(namespace["test"]):
             namespace["test"]()
