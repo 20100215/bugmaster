@@ -26,16 +26,16 @@ if "round_started" not in st.session_state:
 # --- PROMPT GENERATION ---
 def generate_prompt(difficulty):
     return f"""
-You are an expert Python coding tutor. Generate a Python function with a subtle bug that a tech expert must fix.
+You are a coding interview maker. Generate a Python function (or if Medium and hard difficulty - more complex code with more sub functions) with bugs that a tech expert must fix.
 
 ⚠️ RULES (Strict):
 1. At the top, write a short comment (start with a #) that explains what the function is supposed to do.
-2. Write one complete function (or a chain of complete functions) with a small bug. This function MUST be called something meaningful.
+2. Write one complete function (or a chain of complete functions) with a bug. This function MUST be called something meaningful.
    - Include a docstring with the input and output formats
 3. Do NOT include any hints or comments about where the bug is.
 4. On a separate line, write exactly: ---HIDDEN_TEST---
 5. Write a test function called `def test():`, and ONLY that name (not `test_func`, etc.)
-   - It should call the same function you just wrote above (e.g. `calculate_sum`)
+   - It should call the same function you just wrote above.
    - Include a few example cases and `assert` statements
    - If the test passes, print “Test passed!”
 
@@ -44,25 +44,39 @@ You are an expert Python coding tutor. Generate a Python function with a subtle 
 
 The format must look exactly like this:
 
-# This function is supposed to calculate the sum of numbers in a list
+# This function is supposed to ... 
 def func(...):
     ...
 
 ---HIDDEN_TEST---
 
 def test():
-    result = func_name(....)
+    result = func(....)
     assert result == ...
     print("Test passed!")
 
 
 ---
 
-Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly.
+Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly, and focusing on the following topics based on the difficulty given:
 
-Easy - 6-12 lines of code (for the user code) 
-Medium - 15-25 lines of code (for the user code) 
-Hard - 30-40 lines of code (for the user code) 
+Easy topics: 
+Arrays & Strings
+Hashmaps & Sets
+Stacks
+
+Medium topics:
+2 Pointers
+Linked Lists
+Binary Search
+Sliding Window
+
+Hard topics:
+Trees
+Heaps
+Recursive Backtracking
+Graphs
+Dynamic Programming
 """
 
 
@@ -77,7 +91,7 @@ def call_groq(prompt):
     data = {
         "model": MODEL_NAME,
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.5,
+        "temperature": 1.0,
     }
 
     response = requests.post(url, json=data, headers=headers)
