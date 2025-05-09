@@ -60,9 +60,9 @@ def test():
 
 Now, generate the broken code and hidden test function for the '{difficulty}' difficulty level, following the specified format exactly.
 
-Easy - 6-12 lines of code
-Medium - 15-25 lines of code
-Hard - 30-40 lines of code
+Easy - 6-12 lines of code (for the user code) 
+Medium - 15-25 lines of code (for the user code) 
+Hard - 30-40 lines of code (for the user code) 
 """
 
 
