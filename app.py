@@ -4,6 +4,7 @@ import time
 import traceback
 import os
 import requests
+import re
 
 # --- CONFIG ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Use env or hardcode
@@ -25,16 +26,33 @@ if "round_started" not in st.session_state:
 # --- PROMPT GENERATION ---
 def generate_prompt(difficulty):
     return f"""
-You are an expert Python teacher.
+You are an expert Python coding tutor. Generate a Python function with a subtle bug that a student must fix.
 
-Your task is to generate Python code containing a subtle bug for the user to debug. Follow this format exactly:
+Requirements:
+1. At the top, write a comment that clearly explains what the function is supposed to do.
+2. Below it, write the **buggy function only** (do NOT explain the bug).
+3. On a separate line, write exactly: ---HIDDEN_TEST---
+4. Below that, write a test function named `def test():` that:
+   - Imports or reuses the buggy function.
+   - Calls it with meaningful test input.
+   - Asserts expected output using `assert`.
+   - Prints “Test passed!” if successful.
+   - DO NOT use try/except or hide the test name.
 
-1. A **comment block** at the top explaining what the function is supposed to do.
-2. A **single Python function** that contains a logical bug.
-3. Include realistic variable names and logic for the chosen difficulty.
-4. Include a hidden test function **after the code**, clearly marked with `---HIDDEN_TEST---`.
+Do not include the "---HIDDEN_TEST---" section in the same comment block. Return only valid Python code and nothing else.
 
-DO NOT point out the bug. DO NOT print anything inside the test.
+Format strictly like this:
+
+# This function is supposed to ...
+def function_name(...):
+    ...
+
+---HIDDEN_TEST---
+
+def test():
+    ...
+    assert ...
+    print("Test passed!")
 
 ---
 
@@ -153,26 +171,31 @@ def call_groq(prompt):
 
 
 # --- SPLIT CODE ---
+
 def split_code_sections(full_code):
-    parts = full_code.split('---HIDDEN_TEST---')
-    visible_code = parts[0].strip()
-    hidden_test = parts[1].strip() if len(parts) > 1 else ""
-    return visible_code, hidden_test
+    match = re.split(r'^\s*---HIDDEN_TEST---\s*$', full_code, maxsplit=1, flags=re.MULTILINE)
+    if len(match) == 2:
+        visible_code = match[0].strip()
+        hidden_test = match[1].strip()
+        return visible_code, hidden_test
+    return full_code, ""  # fallback
+
 
 
 # --- VALIDATE FIX ---
 def check_user_fix(user_code, test_code):
     try:
         namespace = {}
-        exec(user_code, namespace)
-        exec(test_code, namespace)
-        if "test" in namespace:
-            namespace["test"]()
-            return True, None
-        else:
-            return False, "Test function not found."
+        exec(user_code, namespace)  # user's fixed code
+        exec(test_code, namespace)  # hidden test
+        test_func = namespace.get("test", None)
+        if not test_func:
+            return False, "❌ Test function not found or not named correctly."
+        test_func()
+        return True, None
     except Exception as e:
         return False, traceback.format_exc()
+
 
 
 # --- UI START ---
