@@ -29,7 +29,7 @@ def generate_prompt(difficulty):
 You are an expert Python coding tutor. Generate a Python function with a subtle bug that a student must fix.
 
 ⚠️ RULES (Strict):
-1. At the top, write a short comment that explains what the function is supposed to do.
+1. At the top, write a short comment (start with a #) that explains what the function is supposed to do.
 2. Write one complete function with a small bug. This function MUST be called something meaningful like `calculate_sum`, `reverse_string`, or `binary_search`.
    - Include a docstring with the input and output formats
 3. Do NOT include any hints or comments about where the bug is.
