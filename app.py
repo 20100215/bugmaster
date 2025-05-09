@@ -48,6 +48,7 @@ You are a coding interview maker. Generate a Python program containing function 
    - Include a few example cases and `assert` statements
    - If the test passes, print “Test passed!”
 6. Make sure the output is formatted as if it is a code file, do not display any "\n"s. 
+7. Include all necessary imports in the original code.
 
 ❌ Do NOT change function names between the original code and the test.
 ✅ DO name the test function exactly: `test()`
