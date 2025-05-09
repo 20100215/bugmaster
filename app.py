@@ -187,8 +187,6 @@ def check_user_fix(user_code, test_code):
         namespace = {}
 
         # Execute user code: this should define the function, e.g., calculate_sum
-        st.write(f'{user_code}\n\n\n{test_code}')
-
         exec(f'{user_code}\n\n\n{test_code}', namespace)
         
         # Check and call the test function
@@ -199,7 +197,7 @@ def check_user_fix(user_code, test_code):
             return False, "❌ Test function 'test()' not found or not callable."
 
     except Exception as e:
-        return False, f"❌ An error occurred: {str(e)}"
+        return False, f"❌ Your code has run but isn't producing the correct output :( {str(e)}"
 
 
 
